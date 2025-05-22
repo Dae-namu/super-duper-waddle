@@ -11,20 +11,20 @@ resource "aws_eks_cluster" "this" {
   ]
 }
 
-# 기본적인 Fargate 환경 구성
-resource "aws_eks_fargate_profile" "default" {
-  cluster_name           = local.cluster_name
-  fargate_profile_name   = "fp-default"
-  depends_on             = [aws_eks_cluster.this]
-  pod_execution_role_arn = aws_iam_role.pod_execution.arn
-  subnet_ids             = aws_subnet.private[*].id
-  selector {
-    namespace = "default"
-  }
-  selector {
-    namespace = "kube-system"
-  }
-}
+# # 기본적인 Fargate 환경 구성
+# resource "aws_eks_fargate_profile" "default" {
+#   cluster_name           = local.cluster_name
+#   fargate_profile_name   = "fp-default"
+#   depends_on             = [aws_eks_cluster.this]
+#   pod_execution_role_arn = aws_iam_role.pod_execution.arn
+#   subnet_ids             = aws_subnet.private[*].id
+#   selector {
+#     namespace = "default"
+#   }
+#   selector {
+#     namespace = "kube-system"
+#   }
+# }
 
 # EC2 기반 Node Group 구성
 resource "aws_eks_node_group" "this" {
