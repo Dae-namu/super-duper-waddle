@@ -1,6 +1,3 @@
-provider "aws" {
-  region = "ap-northeast-2"
-}
 
 locals {
   vpc_name        = "daenamu-test"
