@@ -1,3 +1,14 @@
+# ALB Controller가 사용할 Kuvernetes서비스 어카운트 생성
+resource "kubernetes_service_account" "alb_sa" {
+  metadata {
+    name      = "aws-load-balancer-controller"
+    namespace = "kube-system"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.alb_sa_role.arn
+    }
+  }
+}
+
 # helm_alb_controller.tf
 resource "helm_release" "aws_load_balancer_controller" {
     depends_on = [
@@ -17,7 +28,6 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = local.cluster_name
   }
 
-
 # ALB Controller가 동작할 VPC의 ID
   set {
     name  = "vpcId"
@@ -36,15 +46,3 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = "aws-load-balancer-controller"
   }
 }
-
-# ALB Controller가 사용할 Kuvernetes서비스 어카운트 생성
-resource "kubernetes_service_account" "alb_sa" {
-  metadata {
-    name      = "aws-load-balancer-controller"
-    namespace = "kube-system"
-    annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.alb_sa_role.arn
-    }
-  }
-}
-

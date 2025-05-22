@@ -14,6 +14,11 @@ terraform {
     }
   }
 }
+
+provider "aws" {
+  region = "ap-northeast-2"
+}
+
 provider "kubernetes" {
   host                   = aws_eks_cluster.this.endpoint
   cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
@@ -26,10 +31,4 @@ provider "helm" {
     cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
     token                  = data.aws_eks_cluster_auth.cluster.token
   }
-}
-
-
-
-provider "aws" {
-  region = "ap-northeast-2"
 }
