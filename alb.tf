@@ -11,7 +11,7 @@ resource "kubernetes_deployment" "nginx" {
     }
   }
   spec {
-    replicas = 3
+    replicas = 1
     selector {
       match_labels = {
         app = "nginx"

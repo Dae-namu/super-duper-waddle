@@ -67,4 +67,10 @@ resource "kubernetes_namespace" "default" {
       istio-injection = "enabled"
     }
   }
+
+    lifecycle {
+    prevent_destroy = true
+  }
 }
+
+
