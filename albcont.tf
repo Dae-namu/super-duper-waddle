@@ -20,7 +20,7 @@ resource "helm_release" "aws_load_balancer_controller" {
 
   set {
     name  = "vpcId"
-    value = local.vpc_name
+    value = aws_vpc.this.id
   }
 
   set {
