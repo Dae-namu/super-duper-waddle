@@ -1,9 +1,8 @@
 # Nginx 애플리케이션 배포 (Pod 생성)
 resource "kubernetes_deployment" "nginx" {
-    depends_on = [
-    aws_eks_node_group.this# EC2 노드 그룹이 준비되어야 Pod가 뜰 수 있음
+  depends_on = [
+    aws_eks_node_group.this # EC2 노드 그룹이 준비되어야 Pod가 뜰 수 있음
     # aws_eks_fargate_profile.default, # Fargate를 사용한다면 이 의존성도 추가
-    
   ]
   metadata {
     name = "nginx-deployment"
@@ -45,7 +44,7 @@ resource "kubernetes_service" "nginx" {
       app = "nginx"
     }
   }
-  
+
   # app = nginx로 Deployment와 연결
   spec {
     selector = {
@@ -96,34 +95,6 @@ resource "kubernetes_ingress_v1" "nginx_ingress" {
   }
 
   depends_on = [
-   
     kubernetes_service.nginx
   ]
 }
-
-
-# ALB Controller를 위한 IAM 구성 (IRSA)
-resource "aws_iam_policy" "alb_policy" {
-  name        = "AWSLoadBalancerControllerIAMPolicy"
-  description = "Policy for AWS Load Balancer Controller"
-  policy      = file("${path.module}/iam_policy.json") # 이 파일은 공식 문서에 제공된 JSON 내용
-}
-
-# 위 정책을 ALB Controller 전용 IAM Role(alb_sa_role)에 부착
-resource "aws_iam_role_policy_attachment" "alb_policy_attach" {
-  role       = aws_iam_role.alb_sa_role.name
-  policy_arn = aws_iam_policy.alb_policy.arn
-  depends_on = [aws_iam_policy.alb_policy, aws_iam_role.alb_sa_role]
-}
-
-# OIDC Provider 정의
-resource "aws_iam_openid_connect_provider" "eks" {
-  url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
-  client_id_list  = ["sts.amazonaws.com"]
-  # 여기가 중요합니다: AWS EKS OIDC의 잘 알려진 썸프린트 값을 사용합니다.
-  # 이 값은 일반적으로 변하지 않습니다.
-  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da0afd40f94"]
-  depends_on = [aws_eks_cluster.this] # 이제 이 depends_on은 필수는 아니지만, 유지해도 무방합니다.
-}
-
-
