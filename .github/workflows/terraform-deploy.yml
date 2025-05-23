@@ -2,8 +2,7 @@ name: Terraform Apply for EKS
 
 on:
   push:
-    paths:
-      - 'super-duper-waddle/**'
+    branches: [main]
 
 env:
   AWS_REGION: ap-northeast-2
