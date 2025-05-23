@@ -17,7 +17,8 @@ resource "aws_security_group" "eks_nodes" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+ tags = {
     Name = "${local.cluster_name}-nodes-sg"
+    "kubernetes.io/cluster/${local.cluster_name}" = "owned"
   }
 }

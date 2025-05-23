@@ -19,10 +19,14 @@ provider "aws" {
   region = "ap-northeast-2"
 }
 
+# provider "kubernetes" {
+#   host                   = aws_eks_cluster.this.endpoint
+#   cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
+#   token                  = data.aws_eks_cluster_auth.cluster.token
+# }
+
 provider "kubernetes" {
-  host                   = aws_eks_cluster.this.endpoint
-  cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
+  config_path = "~/.kube/config"
 }
 
 # Helm Chart Repository 추가

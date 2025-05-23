@@ -1,0 +1,35 @@
+{
+    "nodegroup": {
+        "nodegroupName": "ng-ec2",
+        "nodegroupArn": "arn:aws:eks:ap-northeast-2:688184989092:nodegroup/daenamu-test/ng-ec2/7acb7d7e-5275-c832-98f5-740eb24f9efe",
+        "clusterName": "daenamu-test",
+        "version": "1.32",
+        "releaseVersion": "1.32.3-20250519",
+        "createdAt": "2025-05-23T11:33:06.585000+09:00",
+        "modifiedAt": "2025-05-23T11:36:29.323000+09:00",
+        "status": "DELETING",
+        "capacityType": "ON_DEMAND",
+        "scalingConfig": {
+            "minSize": 1,
+            "maxSize": 3,
+            "desiredSize": 2
+        },
+        "instanceTypes": [
+            "t3.medium"
+        ],
+        "subnets": [
+            "subnet-052186eb767c5ead9",
+            "subnet-0ac96beb828d16491"
+        ],
+        "amiType": "AL2_x86_64",
+        "nodeRole": "arn:aws:iam::688184989092:role/daenamu-test-node-group-role",
+        "diskSize": 20,
+        "health": {
+            "issues": []
+        },
+        "updateConfig": {
+            "maxUnavailable": 1
+        },
+        "tags": {}
+    }
+}
