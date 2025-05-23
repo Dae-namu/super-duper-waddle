@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
-  CLUSTER_NAME: my-eks-cluster
+  CLUSTER_NAME: daenamu-test
 
 jobs:
   terraform:
