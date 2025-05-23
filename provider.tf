@@ -26,12 +26,12 @@ provider "aws" {
 # }
 
 provider "kubernetes" {
-  config_path = "~/.kube/config"
+  config_path = pathexpand("~/.kube/config")
 }
 
 # Helm Chart Repository 추가
 provider "helm" {
   kubernetes {
-    config_path = "~/.kube/config"
+    config_path = pathexpand("~/.kube/config")
   }
 }
