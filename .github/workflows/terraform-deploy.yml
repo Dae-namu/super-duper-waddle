@@ -7,6 +7,7 @@ on:
 env:
   AWS_REGION: ap-northeast-2
   CLUSTER_NAME: daenamu-test
+  # KUBECONFIG: /home/runner/.kube/config
 
 jobs:
   terraform:
@@ -23,13 +24,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-      
-      # - name: Generate kubeconfig for EKS
-      #   run: |
-      #     aws eks update-kubeconfig \
-      #       --name ${{ env.CLUSTER_NAME }} \
-      #       --region ${{ env.AWS_REGION }}
 
+      # - name: Ensure .kube directory exists
+      #   run: mkdir -p /home/runner/.kube
+      
+      - name: Generate kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.CLUSTER_NAME }} \
+            --region ${{ env.AWS_REGION }}
       # - name: Install AWS CLI
       #   run: |
       #     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -49,8 +52,3 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
-      
-      - name: Rebuild kubeconfig if Terraform failed
-        if: failure()
-        run: aws eks --region ap-northeast-2 update-kubeconfig --name daenamu-test
-
