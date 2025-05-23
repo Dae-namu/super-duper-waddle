@@ -11,9 +11,6 @@ env:
 jobs:
   terraform:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: ./super-duper-waddle
 
     steps:
       - name: Checkout
