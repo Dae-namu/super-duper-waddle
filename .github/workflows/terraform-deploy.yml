@@ -24,11 +24,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
       
-      - name: Generate kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig \
-            --name ${{ env.CLUSTER_NAME }} \
-            --region ${{ env.AWS_REGION }}
+      # - name: Generate kubeconfig for EKS
+      #   run: |
+      #     aws eks update-kubeconfig \
+      #       --name ${{ env.CLUSTER_NAME }} \
+      #       --region ${{ env.AWS_REGION }}
 
       # - name: Install AWS CLI
       #   run: |
