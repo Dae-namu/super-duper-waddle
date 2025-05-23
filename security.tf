@@ -4,10 +4,11 @@ resource "aws_security_group" "eks_nodes" {
   vpc_id      = aws_vpc.this.id
 
   ingress {
+    description = "Allow HTTP from anywhere (for ALB)"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] # ✅ ALB에서 접근 가능
   }
 
   egress {
