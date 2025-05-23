@@ -49,3 +49,6 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
+        if: failure()
+        run: aws eks --region ap-northeast-2 update-kubeconfig --name daenamu-test
+
