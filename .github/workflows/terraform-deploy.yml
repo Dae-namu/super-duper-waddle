@@ -1,4 +1,4 @@
-name: Terraform Apply for EKS
+name: Terraform Apply with Artifact State and EKS Kubeconfig
 
 on:
   push:
@@ -7,50 +7,83 @@ on:
 env:
   AWS_REGION: ap-northeast-2
   CLUSTER_NAME: daenamu-test
-  # KUBECONFIG: /home/runner/.kube/config
 
 jobs:
   terraform:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout
+      # 1. GitHub 리포지토리 코드 체크아웃
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      # 2. AWS 인증 설정
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      # - name: Ensure .kube directory exists
-      #   run: mkdir -p /home/runner/.kube
-
-      # - name: Install AWS CLI
-      #   run: |
-      #     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-      #     unzip awscliv2.zip
-      #     sudo ./aws/install
-
+      # 3. Terraform 설치
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.12.0
+          terraform_version: 1.12.1
 
+      # 4. 이전 상태 파일 복원 (없으면 무시)
+      - name: Download previous tfstate (if exists)
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-state
+        continue-on-error: true
+
+      # 5. 상태 파일 준비
+      - name: Move state file if it exists
+        run: |
+          if [ -f terraform.tfstate ]; then
+            echo "Found previous state file."
+          else
+            echo "{}" > terraform.tfstate
+            echo "No previous state file. Created empty state."
+          fi
+
+      # 6. Terraform 초기화
       - name: Terraform Init
         run: terraform init
 
+      # 7. Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
+      # 8. Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
-      
-      - name: Generate kubeconfig for EKS
+      # 9. EKS kubeconfig 생성
+      - name: Generate kubeconfig
         run: |
           aws eks update-kubeconfig \
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.AWS_REGION }}
+
+      # 10. 노드 그룹 준비 대기 (최대 150초 동안 재시도)
+      - name: Wait for nodes to be ready
+        run: |
+          for i in {1..10}; do
+            echo "Checking nodes (attempt $i)..."
+            if kubectl get nodes; then
+              echo "Nodes are ready."
+              break
+            fi
+            echo "Not ready yet. Retrying in 15s..."
+            sleep 15
+          done
+
+      # 11. 상태 파일을 GitHub Artifact로 저장
+      - name: Upload updated tfstate
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-state
+          path: terraform.tfstate
