@@ -34,7 +34,7 @@ jobs:
 
       # 4. 이전 상태 파일 복원 (없으면 무시)
       - name: Download previous tfstate (if exists)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.3.0
         with:
           name: terraform-state
         continue-on-error: true
@@ -83,7 +83,7 @@ jobs:
 
       # 11. 상태 파일을 GitHub Artifact로 저장
       - name: Upload updated tfstate
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: terraform-state
           path: terraform.tfstate
