@@ -84,8 +84,8 @@ jobs:
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.AWS_REGION }}
       
-      - name: Terraform Reapply
-        run: terraform apply -auto-approve tfplan
+      # - name: Terraform Reapply
+      #   run: terraform apply -auto-approve tfplan
 
 
       - name: Upload updated tfstate
