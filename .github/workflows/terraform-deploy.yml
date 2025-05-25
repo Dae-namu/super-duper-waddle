@@ -39,17 +39,23 @@ jobs:
         run: |
           if [ -d terraform-state ]; then
             mv terraform-state/terraform.tfstate .
-            echo "Previous state restored"
+            echo "✅ Previous state restored"
           else
-            echo "No previous state found"
+            echo "ℹ️ No previous state found"
           fi
 
-      # ✅ IAM 관련 .tf 파일 제외
-      - name: Temporarily disable IAM-related files
+      # IAM 관련 파일 비활성화
+      - name: Disable IAM-related tf files
         run: |
-          mkdir skipped || true
+          mkdir -p skipped
           mv iam.tf skipped/ || true
           mv sa.tf skipped/ || true
+
+      # eks.tf 내 IAM 참조 주석 처리
+      - name: Comment out IAM references in eks.tf
+        run: |
+          sed -i 's/^\(\s*\)role_arn\s*=.*/\1# role_arn = <removed-by-ci>/' eks.tf
+          sed -i 's/^\(\s*\)depends_on\s*=.*/\1# depends_on = <removed-by-ci>/' eks.tf
 
       - name: Terraform Init
         run: terraform init
@@ -59,12 +65,6 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
-
-      # (선택) .tf 파일 복원
-      - name: Restore IAM files (optional)
-        run: |
-          mv skipped/iam.tf . || true
-          mv skipped/sa.tf . || true
 
       - name: Generate kubeconfig
         run: |
@@ -88,3 +88,11 @@ jobs:
         with:
           name: terraform-state
           path: terraform.tfstate
+
+
+      - name: Restore eks.tf IAM lines (optional)
+        run: |
+          sed -i 's/^# role_arn = <removed-by-ci>/  role_arn = aws_iam_role.cluster.arn/' eks.tf
+          sed -i 's/^# depends_on = <removed-by-ci>/  depends_on = [aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy]/' eks.tf
+          mv skipped/iam.tf . || true
+          mv skipped/sa.tf . || true
