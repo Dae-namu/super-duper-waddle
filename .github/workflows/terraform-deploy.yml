@@ -16,7 +16,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -55,6 +61,7 @@ jobs:
           terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile || true
           terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy || true
           terraform import aws_iam_policy.karpenter_controller_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/daenamu-test-KarpenterControllerPolicy || true
+
 
       # 복원 후 Helm, Kubernetes 리소스 문제 없이 처리
       - name: Restore kube_providers.tf
