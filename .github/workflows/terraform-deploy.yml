@@ -1,4 +1,4 @@
-name: Terraform Deploy (Exclude IAM)
+name: Terraform Deploy (with import-safe provider handling)
 
 on:
   push:
@@ -39,60 +39,54 @@ jobs:
         run: |
           if [ -d terraform-state ]; then
             mv terraform-state/terraform.tfstate .
-            echo "✅ Previous state restored"
-          else
-            echo "ℹ️ No previous state found"
           fi
 
-      # IAM 관련 파일 비활성화
-      - name: Disable IAM-related tf files
+      # 1. provider 충돌 방지: kube_providers.tf 제거
+      - name: Temporarily disable kube_providers.tf
         run: |
           mkdir -p skipped
-          mv iam.tf skipped/ || true
-          mv sa.tf skipped/ || true
+          mv kube_providers.tf skipped/ || true
 
-      # eks.tf 내 IAM 참조 주석 처리
-      - name: Comment out IAM references in eks.tf
-        run: |
-          sed -i 's/^\(\s*\)role_arn\s*=.*/\1# role_arn = <removed-by-ci>/' eks.tf
-          sed -i 's/^\(\s*\)depends_on\s*=.*/\1# depends_on = <removed-by-ci>/' eks.tf
-
+      # 2. terraform init (provider 설치)
       - name: Terraform Init
         run: terraform init
 
+      # 3. IAM 리소스 import (필요한 경우만)
+      - name: Import IAM resources (optional)
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          if aws iam get-role --role-name AmazonEKSLoadBalancerControllerRole >/dev/null 2>&1; then
+            terraform import aws_iam_role.alb_sa_role AmazonEKSLoadBalancerControllerRole
+          fi
+          if aws iam get-instance-profile --instance-profile-name daenamu-test-node-group-instance-profile >/dev/null 2>&1; then
+            terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile
+          fi
+          if aws iam get-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy >/dev/null 2>&1; then
+            terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
+          fi
+
+      # 4. kube_providers.tf 복원
+      - name: Restore kube_providers.tf
+        run: |
+          mv skipped/kube_providers.tf . || true
+
+      # 5. Plan + Apply
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
+      # 6. EKS kubeconfig 생성
       - name: Generate kubeconfig
         run: |
           aws eks update-kubeconfig \
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.AWS_REGION }}
 
-      - name: Wait for nodes to be ready
-        run: |
-          for i in {1..10}; do
-            echo "Checking nodes (attempt $i)..."
-            if kubectl get nodes; then
-              echo "Nodes are ready."
-              break
-            fi
-            sleep 15
-          done
-
       - name: Upload updated tfstate
         uses: actions/upload-artifact@v4.6.2
         with:
           name: terraform-state
           path: terraform.tfstate
-
-
-      - name: Restore eks.tf IAM lines (optional)
-        run: |
-          sed -i 's/^# role_arn = <removed-by-ci>/  role_arn = aws_iam_role.cluster.arn/' eks.tf
-          sed -i 's/^# depends_on = <removed-by-ci>/  depends_on = [aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy]/' eks.tf
-          mv skipped/iam.tf . || true
-          mv skipped/sa.tf . || true
