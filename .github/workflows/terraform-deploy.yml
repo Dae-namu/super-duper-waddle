@@ -16,56 +16,53 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.12.1
 
-      # - name: Download previous tfstate (if exists)
-      #   uses: actions/download-artifact@v4.3.0
-      #   with:
-      #     name: terraform-state
-      #   continue-on-error: true
+      - name: Download previous tfstate (if exists)
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: terraform-state
+        continue-on-error: true
 
-      # - name: Restore tfstate if available
-      #   run: |
-      #     if [ -d terraform-state ]; then
-      #       mv terraform-state/terraform.tfstate .
-      #     fi
+      - name: Restore tfstate if available
+        run: |
+          if [ -d terraform-state ]; then
+            mv terraform-state/terraform.tfstate .
+          fi
 
-      # # provider 충돌 방지: Kubernetes/Helm provider 제거
-      # - name: Temporarily disable kube_providers.tf
-      #   run: |
-      #     mkdir -p skipped
-      #     mv kube_providers.tf skipped/ || true
+      # provider 충돌 방지: Kubernetes/Helm provider 제거
+      - name: Temporarily disable kube_providers.tf
+        run: |
+          mkdir -p skipped
+          mv kube_providers.tf skipped/ || true
 
       - name: Terraform Init
         run: terraform init
 
-      # # IAM 리소스 import (기존에 존재할 가능성 있는 것만)
-      # - name: Import IAM resources
-      #   env:
-      #     AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      #   run: |
-      #     terraform import aws_iam_role.alb_sa_role AmazonEKSLoadBalancerControllerRole || true
-      #     terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile || true
-      #     terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy || true
+      - name: Import IAM resources
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          terraform import aws_iam_role.cluster daenamu-test-eks-cluster-role || true
+          terraform import aws_iam_role.pod_execution daenamu-test-eks-pod-execution-role || true
+          terraform import aws_iam_role.node_group daenamu-test-node-group-role || true
+          terraform import aws_iam_role.alb_sa_role AmazonEKSLoadBalancerControllerRole || true
+          terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile || true
+          terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy || true
+          terraform import aws_iam_policy.karpenter_controller_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/daenamu-test-KarpenterControllerPolicy || true
 
-      # # 복원 후 Helm, Kubernetes 리소스 문제 없이 처리
-      # - name: Restore kube_providers.tf
-      #   run: |
-      #     mv skipped/kube_providers.tf . || true
+      # 복원 후 Helm, Kubernetes 리소스 문제 없이 처리
+      - name: Restore kube_providers.tf
+        run: |
+          mv skipped/kube_providers.tf . || true
 
-      # - name: Terraform Re-Init (after restoring kube_providers.tf)
-      #   run: terraform init
+      - name: Terraform Re-Init (after restoring kube_providers.tf)
+        run: terraform init
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan
@@ -83,8 +80,8 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
 
-      # - name: Upload updated tfstate
-      #   uses: actions/upload-artifact@v4.6.2
-      #   with:
-      #     name: terraform-state
-      #     path: terraform.tfstate
+      - name: Upload updated tfstate
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: terraform-state
+          path: terraform.tfstate
