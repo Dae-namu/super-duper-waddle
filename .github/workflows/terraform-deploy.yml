@@ -64,6 +64,9 @@ jobs:
         run: |
           mv skipped/kube_providers.tf . || true
 
+      - name: Terraform Re-Init (after restoring kube_providers.tf)
+        run: terraform init
+
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
