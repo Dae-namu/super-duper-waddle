@@ -58,6 +58,7 @@ jobs:
           terraform import aws_iam_role.pod_execution daenamu-test-eks-pod-execution-role || true
           terraform import aws_iam_role.node_group daenamu-test-node-group-role || true
           terraform import aws_iam_role.alb_sa_role AmazonEKSLoadBalancerControllerRole || true
+          terraform import aws_iam_role.karpenter_controller_role daenamu-test-karpenter-controller || true
           terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile || true
           terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy || true
           terraform import aws_iam_policy.karpenter_controller_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/daenamu-test-KarpenterControllerPolicy || true
