@@ -39,19 +39,50 @@ jobs:
           name: terraform-state
         continue-on-error: true
 
-      # 5. 상태 파일 준비
-      - name: Move state file if it exists
+      # # 5. 상태 파일 준비
+      # - name: Move state file if it exists
+      #   run: |
+      #     if [ -f terraform.tfstate ]; then
+      #       echo "Found previous state file."
+      #     else
+      #       echo "{}" > terraform.tfstate
+      #       echo "No previous state file. Created empty state."
+      #     fi
+      
+    # 상태 파일이 있으면 현재 디렉토리로 이동
+      - name: Move state file if downloaded
         run: |
-          if [ -f terraform.tfstate ]; then
-            echo "Found previous state file."
+          if [ -d terraform-state ]; then
+            mv terraform-state/terraform.tfstate .
+            echo "Previous state restored."
           else
-            echo "{}" > terraform.tfstate
-            echo "No previous state file. Created empty state."
+            echo "No previous state file found. Starting fresh."
           fi
+
 
       # 6. Terraform 초기화
       - name: Terraform Init
         run: terraform init
+
+      - name: Import pre-existing IAM resources if needed
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}  # GitHub Secrets에 추가 필요
+        run: |
+          set -e
+
+          echo "Checking and importing existing IAM resources..."
+
+          if aws iam get-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy >/dev/null 2>&1; then
+            terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
+          fi
+
+          if aws iam get-role --role-name AmazonEKSLoadBalancerControllerRole >/dev/null 2>&1; then
+            terraform import aws_iam_role.alb_sa_role AmazonEKSLoadBalancerControllerRole
+          fi
+
+          if aws iam get-instance-profile --instance-profile-name daenamu-test-node-group-instance-profile >/dev/null 2>&1; then
+            terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile
+          fi
 
       # 7. Terraform Plan
       - name: Terraform Plan
