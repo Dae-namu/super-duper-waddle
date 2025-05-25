@@ -1,4 +1,4 @@
-name: Terraform Apply with Artifact State and EKS Kubeconfig
+name: Terraform Deploy (Exclude IAM)
 
 on:
   push:
@@ -9,15 +9,13 @@ env:
   CLUSTER_NAME: daenamu-test
 
 jobs:
-  terraform:
+  deploy:
     runs-on: ubuntu-22.04
 
     steps:
-      # 1. GitHub 리포지토리 코드 체크아웃
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 2. AWS 인증 설정
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -26,80 +24,54 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3. Terraform 설치
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.12.1
 
-      # 4. 이전 상태 파일 복원 (없으면 무시)
       - name: Download previous tfstate (if exists)
         uses: actions/download-artifact@v4.3.0
         with:
           name: terraform-state
         continue-on-error: true
 
-      # # 5. 상태 파일 준비
-      # - name: Move state file if it exists
-      #   run: |
-      #     if [ -f terraform.tfstate ]; then
-      #       echo "Found previous state file."
-      #     else
-      #       echo "{}" > terraform.tfstate
-      #       echo "No previous state file. Created empty state."
-      #     fi
-      
-    # 상태 파일이 있으면 현재 디렉토리로 이동
-      - name: Move state file if downloaded
+      - name: Restore tfstate if available
         run: |
           if [ -d terraform-state ]; then
             mv terraform-state/terraform.tfstate .
-            echo "Previous state restored."
+            echo "Previous state restored"
           else
-            echo "No previous state file found. Starting fresh."
+            echo "No previous state found"
           fi
 
+      # ✅ IAM 관련 .tf 파일 제외
+      - name: Temporarily disable IAM-related files
+        run: |
+          mkdir skipped || true
+          mv iam.tf skipped/ || true
+          mv sa.tf skipped/ || true
 
-      # 6. Terraform 초기화
       - name: Terraform Init
         run: terraform init
 
-      - name: Import pre-existing IAM resources if needed
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}  # GitHub Secrets에 추가 필요
-        run: |
-          set -e
-
-          echo "Checking and importing existing IAM resources..."
-
-          if aws iam get-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy >/dev/null 2>&1; then
-            terraform import aws_iam_policy.alb_policy arn:aws:iam::${AWS_ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
-          fi
-
-          if aws iam get-role --role-name AmazonEKSLoadBalancerControllerRole >/dev/null 2>&1; then
-            terraform import aws_iam_role.alb_sa_role AmazonEKSLoadBalancerControllerRole
-          fi
-
-          if aws iam get-instance-profile --instance-profile-name daenamu-test-node-group-instance-profile >/dev/null 2>&1; then
-            terraform import aws_iam_instance_profile.node_group daenamu-test-node-group-instance-profile
-          fi
-
-      # 7. Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
-      # 8. Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
-      # 9. EKS kubeconfig 생성
+      # (선택) .tf 파일 복원
+      - name: Restore IAM files (optional)
+        run: |
+          mv skipped/iam.tf . || true
+          mv skipped/sa.tf . || true
+
       - name: Generate kubeconfig
         run: |
           aws eks update-kubeconfig \
             --name ${{ env.CLUSTER_NAME }} \
             --region ${{ env.AWS_REGION }}
 
-      # 10. 노드 그룹 준비 대기 (최대 150초 동안 재시도)
       - name: Wait for nodes to be ready
         run: |
           for i in {1..10}; do
@@ -108,11 +80,9 @@ jobs:
               echo "Nodes are ready."
               break
             fi
-            echo "Not ready yet. Retrying in 15s..."
             sleep 15
           done
 
-      # 11. 상태 파일을 GitHub Artifact로 저장
       - name: Upload updated tfstate
         uses: actions/upload-artifact@v4.6.2
         with:
